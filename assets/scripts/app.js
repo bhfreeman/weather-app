@@ -4,13 +4,9 @@ var forecastContainer = document.querySelector("#forecast-container");
 var searchBtn = document.querySelector("#search-btn");
 var cityText = document.querySelector("#city-text");
 var stateText = document.querySelector("#state-text");
-// var temperature;
-// var humidity;
-// var windSpeed;
-// var uvIndex;
-// var headName;
-// var date;
-// var weatherIcon;
+var recent = document.querySelector("#recent");
+
+var recentSearches = JSON.parse(localStorage.getItem("recents")) || [];
 
 function getLocation(city) {
   var apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=imperial`;
@@ -26,12 +22,13 @@ function getLocation(city) {
       fetch(newUrl)
         .then((data) => data.json())
         .then(function (data) {
-          console.log(data);
+          // console.log(data.current.dt)
+          // console.log(convert(data.current.dt));
           currentWeatherCard(data);
           forecastContainer.innerHTML = "";
-          for (let i = 0; i < 4; i++) {
+          for (let i = 0; i < 5; i++) {
             item = data.daily[i];
-            console.log(item);
+            // console.log(item);
             forecastCard(item);
           }
         });
@@ -47,17 +44,27 @@ function currentWeatherCard(item) {
   var humidityLi = document.createElement("li");
   var windLi = document.createElement("li");
   var uvLi = document.createElement("li");
+  var indexBtn = document.createElement("button");
   var iconImg = document.createElement("img");
   iconImg.setAttribute(
     "src",
     `http://openweathermap.org/img/wn/${item.current.weather[0].icon}@2x.png`
   );
-  headNameH1.innerText = `${headName} ${item.current.dt}`;
+  headNameH1.innerText = `${headName} ${convert(item.current.dt)}`;
   headNameH1.append(iconImg);
-  tempLi.innerText = `Temperature: ${item.current.temp}`;
-  humidityLi.innerText = `Humidity: ${item.current.humidity}`;
-  windLi.innerText = `Wind Speed: ${item.current.wind_speed}`;
-  uvLi.innerText = `UV Index: ${item.current.uvi}`;
+  tempLi.innerText = `Temperature: ${item.current.temp} °F`;
+  humidityLi.innerText = `Humidity: ${item.current.humidity}%`;
+  windLi.innerText = `Wind Speed: ${item.current.wind_speed} MPH`;
+  uvLi.innerText = `UV Index: `;
+  indexBtn.innerText = item.current.uvi;
+  uvLi.append(indexBtn);
+  if (item.current.uvi < 3) {
+    indexBtn.classList = "btn-primary";
+  } else if (item.current.uvi > 7) {
+    indexBtn.classList = "btn-warning";
+  } else {
+    indexBtn.classList = "btn-danger";
+  }
   ul.classList = "list-group";
   tempLi.classList = "list-group-item";
   humidityLi.classList = "list-group-item";
@@ -72,7 +79,7 @@ function currentWeatherCard(item) {
 
 function forecastCard(data) {
   var newCard = document.createElement("div");
-  var headH1 = document.createElement("h1");
+  var headH3 = document.createElement("h3");
   var ul = document.createElement("ul");
   var tempLi = document.createElement("li");
   var humidityLi = document.createElement("li");
@@ -81,18 +88,93 @@ function forecastCard(data) {
     "src",
     `http://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png`
   );
-  headH1.innerText = `${data.dt}`;
-  tempLi.innerText = `Temperature: ${data.temp.day}`;
-  humidityLi.innerText = `Humidity: ${data.humidity}`;
-  newCard.classList = "col-2";
-  newCard.append(headH1);
+
+  headH3.innerText = `${convert(data.dt)}`;
+  tempLi.innerText = `Temperature: ${data.temp.day} °F`;
+  humidityLi.innerText = `Humidity: ${data.humidity}%`;
+  newCard.classList = "col-2 bg-primary m-2 p-2 rounded";
+  newCard.append(headH3);
   ul.append(iconImg, tempLi, humidityLi);
   newCard.append(ul);
   forecastContainer.append(newCard);
 }
+function saveSearch(item) {
+  if (!recentSearches.includes(item)) {
+    recentSearches.unshift(item);
+    localStorage.setItem("recents", JSON.stringify(recentSearches));
+  }
+  renderSearch();
+}
+
+function renderSearch() {
+  recent.innerHTML = "";
+  for (let i = 0; i < recentSearches.length; i++) {
+    var recentBtn = document.createElement("button");
+    recentBtn.classList = "list-group-item";
+    var item = recentSearches[i];
+    recentBtn.innerText = item;
+    recent.append(recentBtn);
+  }
+}
+
+function convert(timestamp) {
+  // Months array
+  var months_arr = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  // Convert timestamp to milliseconds
+  var date = new Date(timestamp * 1000);
+
+  // Year
+  var year = date.getFullYear();
+
+  // Month
+  var month = months_arr[date.getMonth()];
+
+  // Day
+  var day = date.getDate();
+
+  // Hours
+  // var hours = date.getHours();
+
+  // Minutes
+  // var minutes = "0" + date.getMinutes();
+
+  // Seconds
+  // var seconds = "0" + date.getSeconds();
+
+  // Display date time in MM-dd-yyyy h:m:s format
+  var convdataTime = month + "-" + day + "-" + year;
+  // +' '+hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+  return convdataTime;
+}
+
+renderSearch();
 
 searchBtn.addEventListener("click", function (e) {
   e.preventDefault();
   getLocation(cityText.value);
+  saveSearch(cityText.value);
   console.log("clicked");
+});
+
+recent.addEventListener("click", function (e) {
+  var element = e.target;
+  // console.log(element);
+  var text = element.textContent;
+  if (element.matches("button")) {
+    getLocation(text);
+  }
 });
